@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { API_BASE_URL, getImageUrl } from '@/lib/api';
+import Layout from '@/components/Layout';
 
 export default function NewTestimonialPage() {
   const router = useRouter();
@@ -28,7 +28,7 @@ export default function NewTestimonialPage() {
     uploadData.append('image', file);
 
     try {
-      const response = await fetch(`${API_URL}/api/upload/image`, {
+      const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
         body: uploadData,
       });
@@ -49,7 +49,7 @@ export default function NewTestimonialPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/testimonials`, {
+      const response = await fetch(`${API_BASE_URL}/testimonials`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,9 +71,13 @@ export default function NewTestimonialPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-8">
-        <h2 className="text-3xl font-bold mb-8">Add New Testimonial</h2>
+    <Layout>
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Add New Testimonial</h1>
+          <p className="text-gray-600 mt-1">Create a new customer testimonial</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -135,7 +139,7 @@ export default function NewTestimonialPage() {
             {uploading && <p className="text-sm text-gray-500 mt-2">Uploading...</p>}
             {formData.image && (
               <img
-                src={`${API_URL}${formData.image}`}
+                src={getImageUrl(formData.image)}
                 alt="Preview"
                 className="w-24 h-24 object-cover rounded-full mt-4"
               />
@@ -180,8 +184,9 @@ export default function NewTestimonialPage() {
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

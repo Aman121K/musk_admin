@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { API_BASE_URL } from '@/lib/api';
+import Layout from '@/components/Layout';
 
 export default function ImportProductsPage() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function ImportProductsPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${API_URL}/api/import/products`, {
+      const response = await fetch(`${API_BASE_URL}/import/products`, {
         method: 'POST',
         body: formData,
       });
@@ -54,30 +54,14 @@ export default function ImportProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-md mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="text-2xl font-bold text-primary-600"
-            >
-              Musshk Admin
-            </button>
-            <button
-              onClick={() => router.push('/products')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              ← Back to Products
-            </button>
-          </div>
+    <Layout>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Import Products from Excel</h1>
+          <p className="text-gray-600 mt-1">Upload an Excel file to bulk import products</p>
         </div>
-      </nav>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-3xl font-bold mb-8">Import Products from Excel</h2>
-
-        <div className="bg-white rounded-lg shadow p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-4">Upload Excel File</h3>
             <p className="text-gray-600 mb-4">
@@ -177,7 +161,7 @@ export default function ImportProductsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { API_BASE_URL, getImageUrl } from '@/lib/api';
+import Layout from '@/components/Layout';
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function NewProductPage() {
     });
 
     try {
-      const response = await fetch(`${API_URL}/api/upload/images`, {
+      const response = await fetch(`${API_BASE_URL}/upload/images`, {
         method: 'POST',
         body: formData,
       });
@@ -75,7 +75,7 @@ export default function NewProductPage() {
         slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       };
 
-      const response = await fetch(`${API_URL}/api/products`, {
+      const response = await fetch(`${API_BASE_URL}/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,9 +97,13 @@ export default function NewProductPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-8">
-        <h2 className="text-3xl font-bold mb-8">Add New Product</h2>
+    <Layout>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Add New Product</h1>
+          <p className="text-gray-600 mt-1">Fill in the details to create a new product</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -299,7 +303,7 @@ export default function NewProductPage() {
             <div className="grid grid-cols-4 gap-4 mt-4">
               {images.map((image, index) => (
                 <div key={index} className="relative">
-                  <img src={`${API_URL}${image}`} alt={`Product ${index + 1}`} className="w-full h-24 object-cover rounded" />
+                  <img src={getImageUrl(image)} alt={`Product ${index + 1}`} className="w-full h-24 object-cover rounded" />
                   <button
                     type="button"
                     onClick={() => setImages(images.filter((_, i) => i !== index))}
@@ -329,8 +333,9 @@ export default function NewProductPage() {
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 
