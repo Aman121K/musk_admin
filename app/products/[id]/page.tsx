@@ -27,11 +27,24 @@ export default function EditProductPage() {
     featured: false,
     bestSeller: false,
     newArrival: false,
+    newArrivalDate: '',
     notes: '',
     rating: '0',
     reviewCount: '0',
   });
+  const [collections, setCollections] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
+
+  const COLLECTIONS = ['Best Seller', 'Niche Edition', 'Inspired Perfumes', 'New Arrivals'];
+  const NEW_ARRIVAL_DATES = ['SEPTEMBER - 2025', 'July-2025', 'MARCH- 2025'];
+
+  const handleCollectionChange = (collection: string) => {
+    setCollections(prev => 
+      prev.includes(collection)
+        ? prev.filter(c => c !== collection)
+        : [...prev, collection]
+    );
+  };
 
   useEffect(() => {
     fetchProduct();
@@ -39,11 +52,12 @@ export default function EditProductPage() {
 
   const fetchProduct = async () => {
     try {
-      // Backend GET uses slug, so we need to fetch all and find by ID
-      const allProductsRes = await fetch(`${API_BASE_URL}/products`);
-      const allProductsData = await allProductsRes.json();
-      const products = allProductsData.products || allProductsData || [];
-      const product = products.find((p: any) => p._id === productId);
+      // Use the new /id/:id endpoint
+      const response = await fetch(`${API_BASE_URL}/products/id/${productId}`);
+      if (!response.ok) {
+        throw new Error('Product not found');
+      }
+      const product = await response.json();
       
       if (!product) {
         throw new Error('Product not found');
@@ -63,10 +77,12 @@ export default function EditProductPage() {
         featured: product.featured || false,
         bestSeller: product.bestSeller || false,
         newArrival: product.newArrival || false,
+        newArrivalDate: product.newArrivalDate || '',
         notes: Array.isArray(product.notes) ? product.notes.join(', ') : '',
         rating: product.rating?.toString() || '0',
         reviewCount: product.reviewCount?.toString() || '0',
       });
+      setCollections(Array.isArray(product.collections) ? product.collections : []);
       setImages(product.images || []);
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -121,6 +137,8 @@ export default function EditProductPage() {
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
         notes: formData.notes.split(',').map(n => n.trim()).filter(n => n),
         images: images,
+        collections: collections,
+        newArrivalDate: collections.includes('New Arrivals') ? formData.newArrivalDate : undefined,
         slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
       };
 
@@ -317,6 +335,39 @@ export default function EditProductPage() {
                   className="w-full px-4 py-2 border rounded-md"
                 />
               </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Collections</label>
+              <p className="text-xs text-gray-500 mb-3">Select which collections this product belongs to:</p>
+              <div className="grid grid-cols-2 gap-3">
+                {COLLECTIONS.map(collection => (
+                  <label key={collection} className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collections.includes(collection)}
+                      onChange={() => handleCollectionChange(collection)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">{collection}</span>
+                  </label>
+                ))}
+              </div>
+              {collections.includes('New Arrivals') && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-2">New Arrival Date</label>
+                  <select
+                    value={formData.newArrivalDate}
+                    onChange={(e) => setFormData({ ...formData, newArrivalDate: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-md"
+                  >
+                    <option value="">Select date</option>
+                    {NEW_ARRIVAL_DATES.map(date => (
+                      <option key={date} value={date}>{date}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="flex space-x-4 mb-6">

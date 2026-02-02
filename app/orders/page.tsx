@@ -15,19 +15,34 @@ interface Order {
   items: Array<{
     product: {
       name: string;
-      price: number;
+      images?: string[];
     };
+    name: string;
+    size?: string;
     quantity: number;
+    price: number;
   }>;
-  total: number;
-  status: string;
-  createdAt: string;
+  totalAmount: number;
+  orderStatus: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  paymentDetails?: {
+    razorpay_order_id?: string;
+    razorpay_payment_id?: string;
+    razorpay_signature?: string;
+  };
   shippingAddress: {
+    name: string;
     address: string;
     city: string;
     state: string;
-    zipCode: string;
+    pincode: string;
+    country: string;
+    phone: string;
   };
+  trackingNumber?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function OrdersPage() {
@@ -57,7 +72,7 @@ export default function OrdersPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: string, status: string) => {
+  const handleStatusUpdate = async (id: string, field: 'orderStatus' | 'paymentStatus', value: string) => {
     try {
       const token = localStorage.getItem('adminToken');
       await fetch(`${API_BASE_URL}/orders/${id}`, {
@@ -66,11 +81,30 @@ export default function OrdersPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ [field]: value }),
       });
       fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
+      alert('Failed to update order. Please try again.');
+    }
+  };
+
+  const handleTrackingUpdate = async (id: string, trackingNumber: string) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      await fetch(`${API_BASE_URL}/orders/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ trackingNumber }),
+      });
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating tracking:', error);
+      alert('Failed to update tracking number. Please try again.');
     }
   };
 
@@ -91,9 +125,22 @@ export default function OrdersPage() {
     }
   };
 
+  const getPaymentStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const filteredOrders = filter === 'all' 
     ? orders 
-    : orders.filter(order => order.status.toLowerCase() === filter.toLowerCase());
+    : orders.filter(order => order.orderStatus.toLowerCase() === filter.toLowerCase());
 
   if (loading) {
     return (
@@ -133,6 +180,32 @@ export default function OrdersPage() {
           ))}
         </div>
 
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <p className="text-sm text-gray-600 mb-1">Total Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <p className="text-sm text-gray-600 mb-1">Processing</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {orders.filter(o => o.orderStatus === 'Processing').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <p className="text-sm text-gray-600 mb-1">Paid</p>
+            <p className="text-2xl font-bold text-green-600">
+              {orders.filter(o => o.paymentStatus === 'Paid').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <p className="text-sm text-gray-600 mb-1">Pending Payment</p>
+            <p className="text-2xl font-bold text-yellow-600">
+              {orders.filter(o => o.paymentStatus === 'Pending').length}
+            </p>
+          </div>
+        </div>
+
         {/* Orders Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
@@ -152,6 +225,9 @@ export default function OrdersPage() {
                     Total
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Payment
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -165,7 +241,7 @@ export default function OrdersPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                       No orders found
                     </td>
                   </tr>
@@ -179,30 +255,92 @@ export default function OrdersPage() {
                         <div className="text-sm font-medium text-gray-900">{order.user?.name || 'N/A'}</div>
                         <div className="text-sm text-gray-500">{order.user?.email || ''}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">{order.items?.length || 0} items</span>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">{order.items?.length || 0} items</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {order.items?.slice(0, 2).map((item: any) => item.name).join(', ')}
+                          {order.items?.length > 2 && '...'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900">Rs. {order.total?.toLocaleString() || '0'}</span>
+                        <span className="text-sm font-semibold text-gray-900">Rs. {(order.totalAmount || 0).toLocaleString()}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <select
+                            value={order.paymentStatus}
+                            onChange={(e) => handleStatusUpdate(order._id, 'paymentStatus', e.target.value)}
+                            className={`text-xs font-medium px-2 py-1 rounded border-0 ${getPaymentStatusColor(order.paymentStatus)}`}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Failed">Failed</option>
+                          </select>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {order.paymentMethod}
+                          </div>
+                          {order.paymentDetails?.razorpay_payment_id && (
+                            <div className="text-xs text-gray-500 font-mono mt-1">
+                              ID: {order.paymentDetails.razorpay_payment_id.slice(-8)}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <select
-                          value={order.status}
-                          onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                          className={`text-xs font-medium px-3 py-1 rounded-full border-0 ${getStatusColor(order.status)}`}
+                          value={order.orderStatus}
+                          onChange={(e) => handleStatusUpdate(order._id, 'orderStatus', e.target.value)}
+                          className={`text-xs font-medium px-3 py-1 rounded-full border-0 ${getStatusColor(order.orderStatus)}`}
                         >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
+                          <option value="Pending">Pending</option>
+                          <option value="Processing">Processing</option>
+                          <option value="Shipped">Shipped</option>
+                          <option value="Delivered">Delivered</option>
+                          <option value="Cancelled">Cancelled</option>
                         </select>
+                        {order.trackingNumber ? (
+                          <div className="text-xs text-gray-600 mt-1">
+                            Track: {order.trackingNumber}
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="Add tracking"
+                            onBlur={(e) => {
+                              if (e.target.value) {
+                                handleTrackingUpdate(order._id, e.target.value);
+                              }
+                            }}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && e.currentTarget.value) {
+                                handleTrackingUpdate(order._id, e.currentTarget.value);
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            className="text-xs mt-1 px-2 py-1 border rounded w-full"
+                          />
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-primary-600 hover:text-primary-900 mr-4">
+                        <button
+                          onClick={() => {
+                            const details = `
+Order #${order.orderNumber}
+Customer: ${order.user?.name} (${order.user?.email})
+Total: Rs. ${order.totalAmount}
+Payment: ${order.paymentStatus} (${order.paymentMethod})
+${order.paymentDetails?.razorpay_payment_id ? `Payment ID: ${order.paymentDetails.razorpay_payment_id}` : ''}
+Status: ${order.orderStatus}
+Shipping: ${order.shippingAddress?.address}, ${order.shippingAddress?.city}
+Items: ${order.items?.map((i: any) => `${i.name} x${i.quantity}`).join(', ')}
+                            `;
+                            alert(details);
+                          }}
+                          className="text-primary-600 hover:text-primary-900 mr-4"
+                        >
                           View
                         </button>
                       </td>
