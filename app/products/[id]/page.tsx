@@ -34,6 +34,7 @@ export default function EditProductPage() {
   });
   const [collections, setCollections] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
+  const [bulletPoints, setBulletPoints] = useState<string[]>(['']);
 
   const COLLECTIONS = ['Best Seller', 'Niche Edition', 'Inspired Perfumes', 'New Arrivals'];
   const NEW_ARRIVAL_DATES = ['SEPTEMBER - 2025', 'July-2025', 'MARCH- 2025'];
@@ -84,6 +85,11 @@ export default function EditProductPage() {
       });
       setCollections(Array.isArray(product.collections) ? product.collections : []);
       setImages(product.images || []);
+      setBulletPoints(
+        Array.isArray(product.bulletPoints) && product.bulletPoints.length > 0
+          ? product.bulletPoints
+          : ['']
+      );
     } catch (error) {
       console.error('Error fetching product:', error);
       alert('Failed to load product');
@@ -105,7 +111,7 @@ export default function EditProductPage() {
     });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload/images`, {
+      const response = await fetch(`${API_BASE_URL}/upload/images?folder=products`, {
         method: 'POST',
         body: uploadFormData,
       });
@@ -113,12 +119,29 @@ export default function EditProductPage() {
       const data = await response.json();
       if (data.success) {
         setImages([...images, ...data.files.map((f: any) => f.url)]);
+      } else {
+        alert('Failed to upload images. Please try again.');
       }
     } catch (error) {
       console.error('Error uploading images:', error);
+      alert('Error uploading images. Please try again.');
     } finally {
       setUploading(false);
     }
+  };
+
+  const addBulletPoint = () => {
+    setBulletPoints([...bulletPoints, '']);
+  };
+
+  const removeBulletPoint = (index: number) => {
+    setBulletPoints(bulletPoints.filter((_, i) => i !== index));
+  };
+
+  const updateBulletPoint = (index: number, value: string) => {
+    const updated = [...bulletPoints];
+    updated[index] = value;
+    setBulletPoints(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,6 +159,7 @@ export default function EditProductPage() {
         reviewCount: parseInt(formData.reviewCount) || 0,
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
         notes: formData.notes.split(',').map(n => n.trim()).filter(n => n),
+        bulletPoints: bulletPoints.filter(bp => bp.trim() !== ''),
         images: images,
         collections: collections,
         newArrivalDate: collections.includes('New Arrivals') ? formData.newArrivalDate : undefined,
@@ -402,6 +426,7 @@ export default function EditProductPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2">Product Images</label>
+              <p className="text-xs text-gray-500 mb-2">You can upload multiple images (up to 20 images)</p>
               <input
                 type="file"
                 multiple
@@ -411,19 +436,62 @@ export default function EditProductPage() {
                 disabled={uploading}
               />
               {uploading && <p className="text-sm text-gray-500 mt-2">Uploading...</p>}
-              <div className="grid grid-cols-4 gap-4 mt-4">
-                {images.map((image, index) => (
-                  <div key={index} className="relative">
-                    <img src={getImageUrl(image)} alt={`Product ${index + 1}`} className="w-full h-24 object-cover rounded" />
-                    <button
-                      type="button"
-                      onClick={() => setImages(images.filter((_, i) => i !== index))}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                    >
-                      ×
-                    </button>
+              {images.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">Uploaded Images ({images.length})</p>
+                  <div className="grid grid-cols-4 gap-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img src={getImageUrl(image)} alt={`Product ${index + 1}`} className="w-full h-24 object-cover rounded border border-gray-200" />
+                        <button
+                          type="button"
+                          onClick={() => setImages(images.filter((_, i) => i !== index))}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                          title="Remove image"
+                        >
+                          ×
+                        </button>
+                        <div className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                          {index + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Bullet Points</label>
+              <p className="text-xs text-gray-500 mb-2">Add key features or highlights that will be displayed on the website</p>
+              <div className="space-y-2">
+                {bulletPoints.map((point, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={point}
+                      onChange={(e) => updateBulletPoint(index, e.target.value)}
+                      placeholder={`Bullet point ${index + 1}`}
+                      className="flex-1 px-4 py-2 border rounded-md"
+                    />
+                    {bulletPoints.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeBulletPoint(index)}
+                        className="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 text-sm"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={addBulletPoint}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm"
+                >
+                  + Add Bullet Point
+                </button>
               </div>
             </div>
 

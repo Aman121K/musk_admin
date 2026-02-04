@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
+import { isAdmin, getAdminUser } from '@/lib/auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,12 +11,45 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    // Check if user is authenticated and is admin
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      router.push('/');
+      return;
+    }
+
+    if (!isAdmin()) {
+      router.push('/unauthorized');
+      return;
+    }
+
+    setIsAuthorized(true);
+    setIsChecking(false);
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     router.push('/');
   };
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return null; // Will redirect to unauthorized page
+  }
+
+  const adminUser = getAdminUser();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -24,7 +59,9 @@ export default function Layout({ children }: LayoutProps) {
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
           <div className="px-6 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <h2 className="text-xl font-semibold text-gray-800">Welcome back!</h2>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Welcome back{adminUser?.name ? `, ${adminUser.name.split(' ')[0]}` : ''}!
+              </h2>
             </div>
             <div className="flex items-center space-x-4">
               <button className="text-gray-600 hover:text-gray-800 p-2 rounded-lg hover:bg-gray-100">

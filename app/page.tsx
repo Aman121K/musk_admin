@@ -30,6 +30,12 @@ export default function AdminLogin() {
       const data = await response.json();
 
       if (response.ok) {
+        // Check if user has admin role
+        if (data.user?.role !== 'admin') {
+          setError('Access denied. You are not an admin user.');
+          return;
+        }
+
         localStorage.setItem('adminToken', data.token);
         localStorage.setItem('adminUser', JSON.stringify(data.user));
         router.push('/dashboard');

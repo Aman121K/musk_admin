@@ -63,6 +63,25 @@ export default function Dashboard() {
       router.push('/');
       return;
     }
+    
+    // Check if user is admin
+    const adminUser = localStorage.getItem('adminUser');
+    if (adminUser) {
+      try {
+        const user = JSON.parse(adminUser);
+        if (user.role !== 'admin') {
+          router.push('/unauthorized');
+          return;
+        }
+      } catch (error) {
+        router.push('/');
+        return;
+      }
+    } else {
+      router.push('/');
+      return;
+    }
+    
     fetchStats();
   }, []);
 
