@@ -53,6 +53,7 @@ export default function Dashboard() {
     testimonials: 0,
     users: 0,
     banners: 0,
+    marketplaces: 0,
     discounts: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -87,12 +88,15 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const [productsRes, ordersRes, blogsRes, testimonialsRes, usersRes] = await Promise.all([
+      const [productsRes, ordersRes, blogsRes, testimonialsRes, usersRes, bannersRes, marketplacesRes, discountsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/products`),
         fetch(`${API_BASE_URL}/orders`),
         fetch(`${API_BASE_URL}/blogs`),
         fetch(`${API_BASE_URL}/testimonials/admin/all`),
         fetch(`${API_BASE_URL}/users`).catch(() => null),
+        fetch(`${API_BASE_URL}/banners`).catch(() => null),
+        fetch(`${API_BASE_URL}/marketplaces?all=true`).catch(() => null),
+        fetch(`${API_BASE_URL}/discounts`).catch(() => null),
       ]);
 
       const products = await productsRes.json();
@@ -100,15 +104,19 @@ export default function Dashboard() {
       const blogs = await blogsRes.json();
       const testimonials = await testimonialsRes.json();
       const users = usersRes ? await usersRes.json() : [];
+      const banners = bannersRes ? await bannersRes.json() : [];
+      const marketplaces = marketplacesRes ? await marketplacesRes.json() : [];
+      const discounts = discountsRes ? await discountsRes.json() : [];
 
       setStats({
-        products: products.total || products.length || 0,
-        orders: orders.length || 0,
-        blogs: blogs.length || 0,
-        testimonials: testimonials.length || 0,
-        users: users.length || 0,
-        banners: 0,
-        discounts: 0,
+        products: products.total ?? (Array.isArray(products.products) ? products.products.length : 0) ?? 0,
+        orders: Array.isArray(orders) ? orders.length : 0,
+        blogs: Array.isArray(blogs) ? blogs.length : 0,
+        testimonials: Array.isArray(testimonials) ? testimonials.length : 0,
+        users: Array.isArray(users) ? users.length : 0,
+        banners: Array.isArray(banners) ? banners.length : 0,
+        marketplaces: Array.isArray(marketplaces) ? marketplaces.length : 0,
+        discounts: Array.isArray(discounts) ? discounts.length : 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -188,6 +196,13 @@ export default function Dashboard() {
             color="bg-pink-500"
           />
           <StatCard
+            title="Marketplaces"
+            value={stats.marketplaces}
+            icon="🏪"
+            href="/marketplaces"
+            color="bg-teal-500"
+          />
+          <StatCard
             title="Discounts"
             value={stats.discounts}
             icon="🎫"
@@ -242,6 +257,16 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-3">
                   <span className="text-xl">🖼️</span>
                   <span className="font-medium text-gray-700 group-hover:text-primary-700">Add New Banner</span>
+                </div>
+                <span className="text-gray-400 group-hover:text-primary-600">→</span>
+              </Link>
+              <Link
+                href="/marketplaces/new"
+                className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all group"
+              >
+                <div className="flex items-center space-x-3">
+                  <span className="text-xl">🏪</span>
+                  <span className="font-medium text-gray-700 group-hover:text-primary-700">Add Platform (Marketplace)</span>
                 </div>
                 <span className="text-gray-400 group-hover:text-primary-600">→</span>
               </Link>

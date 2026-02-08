@@ -1,0 +1,125 @@
+<svg width="400" height="180" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 180">
+  <defs>
+    <linearGradient id="goldGradientWhite" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4AF37;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glowWhite">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Stylized M with Peacock Feather -->
+  <g transform="translate(200, 50)">
+    <!-- Peacock Feather - More detailed with eye pattern -->
+    <g transform="translate(0, -55)">
+      <!-- Feather main body -->
+      <path d="M 0,-50 
+               Q -8,-45 -12,-35 
+               Q -15,-25 -12,-15 
+               Q -8,-5 0,0 
+               Q 8,-5 12,-15 
+               Q 15,-25 12,-35 
+               Q 8,-45 0,-50" 
+            fill="url(#goldGradientWhite)" 
+            stroke="#B8860B" 
+            stroke-width="0.8"
+            filter="url(#glowWhite)"/>
+      
+      <!-- Feather eye pattern -->
+      <circle cx="0" cy="-30" r="4" fill="#FFD700" opacity="0.9"/>
+      <circle cx="0" cy="-30" r="2.5" fill="#FFF"/>
+      <circle cx="0" cy="-30" r="1" fill="#B8860B"/>
+      
+      <!-- Feather fronds -->
+      <path d="M -6,-40 Q -8,-35 -6,-30" 
+            fill="none" 
+            stroke="url(#goldGradientWhite)" 
+            stroke-width="1.5" 
+            stroke-linecap="round"/>
+      <path d="M 6,-40 Q 8,-35 6,-30" 
+            fill="none" 
+            stroke="url(#goldGradientWhite)" 
+            stroke-width="1.5" 
+            stroke-linecap="round"/>
+      <path d="M -4,-45 Q -5,-40 -4,-35" 
+            fill="none" 
+            stroke="url(#goldGradientWhite)" 
+            stroke-width="1.2" 
+            stroke-linecap="round"/>
+      <path d="M 4,-45 Q 5,-40 4,-35" 
+            fill="none" 
+            stroke="url(#goldGradientWhite)" 
+            stroke-width="1.2" 
+            stroke-linecap="round"/>
+    </g>
+    
+    <!-- Elegant Stylized M with flaring strokes -->
+    <g transform="translate(0, 5)">
+      <!-- Left vertical stroke with flare -->
+      <path d="M -35,0 
+               L -35,45 
+               Q -35,50 -30,52 
+               L -20,48 
+               L -15,35 
+               L -10,48 
+               L 0,52 
+               Q 5,50 5,45 
+               L 5,0" 
+            fill="url(#goldGradientWhite)" 
+            stroke="#B8860B" 
+            stroke-width="1.5" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+            filter="url(#glowWhite)"/>
+      
+      <!-- Right vertical stroke with flare -->
+      <path d="M 5,0 
+               L 5,45 
+               Q 5,50 10,52 
+               L 20,48 
+               L 25,35 
+               L 30,48 
+               L 40,52 
+               Q 45,50 45,45 
+               L 45,0" 
+            fill="url(#goldGradientWhite)" 
+            stroke="#B8860B" 
+            stroke-width="1.5" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+            filter="url(#glowWhite)"/>
+      
+      <!-- Center connection -->
+      <path d="M 0,52 L 5,52" 
+            fill="url(#goldGradientWhite)" 
+            stroke="#B8860B" 
+            stroke-width="1.5"/>
+    </g>
+  </g>
+  
+  <!-- MUSSHK Text -->
+  <text x="200" y="125" 
+        font-family="Georgia, 'Times New Roman', serif" 
+        font-size="36" 
+        font-weight="bold" 
+        fill="url(#goldGradientWhite)" 
+        text-anchor="middle" 
+        letter-spacing="3"
+        filter="url(#glowWhite)">MUSSHK</text>
+  
+  <!-- Tagline -->
+  <text x="200" y="155" 
+        font-family="Georgia, 'Times New Roman', serif" 
+        font-size="13" 
+        fill="url(#goldGradientWhite)" 
+        text-anchor="middle" 
+        letter-spacing="2" 
+        opacity="0.95"
+        filter="url(#glowWhite)">WHERE SCENT BECOMES LEGACY</text>
+</svg>

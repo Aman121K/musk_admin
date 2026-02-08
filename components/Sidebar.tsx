@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
@@ -18,6 +19,7 @@ const navigation: NavItem[] = [
   { name: 'Users', href: '/users', icon: '👥' },
   { name: 'Testimonials', href: '/testimonials', icon: '💬' },
   { name: 'Banners', href: '/banners', icon: '🖼️' },
+  { name: 'Marketplaces', href: '/marketplaces', icon: '🏪' },
   { name: 'Discounts', href: '/discounts', icon: '🎫' },
   { name: 'Blogs', href: '/blogs', icon: '📝' },
 ];
@@ -47,8 +49,17 @@ export default function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-gray-700">
-            <h1 className="text-2xl font-bold text-white">Musshk Admin</h1>
-            <p className="text-sm text-gray-400 mt-1">Admin Panel</p>
+            <Link href="/dashboard" className="block">
+              <Image
+                src="/logo/musshk-logo-white.svg"
+                alt="Musshk Admin"
+                width={180}
+                height={72}
+                className="h-12 w-auto"
+                priority
+              />
+              <p className="text-xs text-gray-400 mt-2">Admin Panel</p>
+            </Link>
           </div>
 
           {/* Navigation */}
