@@ -48,6 +48,7 @@ interface Order {
     phone: string;
   };
   trackingNumber?: string;
+  trackingUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -716,12 +717,22 @@ export default function OrdersPage() {
                       </select>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-2">Tracking Number</p>
+                      <p className="text-sm text-gray-600 mb-2">Waybill / Tracking</p>
                       {selectedOrder.trackingNumber ? (
-                        <div className="flex items-center space-x-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-mono bg-white px-3 py-2 rounded border border-gray-300">
                             {selectedOrder.trackingNumber}
                           </span>
+                          {(selectedOrder as Order).trackingUrl && (
+                            <a
+                              href={(selectedOrder as Order).trackingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary-600 hover:text-primary-700 underline"
+                            >
+                              Track →
+                            </a>
+                          )}
                           <button
                             onClick={() => {
                               const newTracking = prompt('Enter new tracking number:', selectedOrder.trackingNumber);
@@ -730,7 +741,7 @@ export default function OrdersPage() {
                                 setSelectedOrder({ ...selectedOrder, trackingNumber: newTracking });
                               }
                             }}
-                            className="text-xs text-primary-600 hover:text-primary-700"
+                            className="text-xs text-gray-600 hover:text-gray-800"
                           >
                             Edit
                           </button>
@@ -788,7 +799,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+              <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex flex-wrap justify-end gap-3">
                 <button
                   onClick={() => {
                     setShowDetailsModal(false);
@@ -798,13 +809,54 @@ export default function OrdersPage() {
                 >
                   Close
                 </button>
+                {selectedOrder.trackingNumber && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('adminToken');
+                        const res = await fetch(`${API_BASE_URL}/orders/${selectedOrder._id}/shipping-label`, {
+                          headers: { Authorization: `Bearer ${token}` },
+                        });
+                        const data = await res.json();
+                        if (data?.url) window.open(data.url, '_blank');
+                        else alert(data?.error || 'Could not get label');
+                      } catch (e) {
+                        alert('Failed to get shipping label');
+                      }
+                    }}
+                    className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Print shipping label
+                  </button>
+                )}
                 <button
-                  onClick={() => {
-                    window.print();
-                  }}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('adminToken');
+                        const res = await fetch(`${API_BASE_URL}/orders/${selectedOrder._id}/invoice`, {
+                          headers: { Authorization: `Bearer ${token}` },
+                        });
+                        const html = await res.text();
+                        const w = window.open('', '_blank');
+                        if (w) {
+                          w.document.write(html);
+                          w.document.close();
+                        } else {
+                          alert('Please allow popups to open the invoice');
+                        }
+                      } catch (e) {
+                        alert('Failed to load invoice');
+                      }
+                    }}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    Print invoice (packing slip)
+                  </button>
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
                 >
-                  Print Invoice
+                  Print this page
                 </button>
               </div>
             </div>
