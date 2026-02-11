@@ -28,13 +28,16 @@ export default function EditProductPage() {
     bestSeller: false,
     newArrival: false,
     newArrivalDate: '',
-    notes: '',
     rating: '0',
     reviewCount: '0',
   });
   const [collections, setCollections] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [bulletPoints, setBulletPoints] = useState<string[]>(['']);
+  const [topNotes, setTopNotes] = useState<string[]>(['']);
+  const [heartNotes, setHeartNotes] = useState<string[]>(['']);
+  const [baseNotes, setBaseNotes] = useState<string[]>(['']);
+  const [otherNotes, setOtherNotes] = useState<string[]>(['']);
 
   const COLLECTIONS = ['Best Seller', 'Niche Edition', 'Inspired Perfumes', 'New Arrivals'];
   const NEW_ARRIVAL_DATES = ['SEPTEMBER - 2025', 'July-2025', 'MARCH- 2025'];
@@ -79,7 +82,6 @@ export default function EditProductPage() {
         bestSeller: product.bestSeller || false,
         newArrival: product.newArrival || false,
         newArrivalDate: product.newArrivalDate || '',
-        notes: Array.isArray(product.notes) ? product.notes.join(', ') : '',
         rating: product.rating?.toString() || '0',
         reviewCount: product.reviewCount?.toString() || '0',
       });
@@ -90,6 +92,10 @@ export default function EditProductPage() {
           ? product.bulletPoints
           : ['']
       );
+      setTopNotes(Array.isArray(product.topNotes) && product.topNotes.length > 0 ? product.topNotes : ['']);
+      setHeartNotes(Array.isArray(product.heartNotes) && product.heartNotes.length > 0 ? product.heartNotes : ['']);
+      setBaseNotes(Array.isArray(product.baseNotes) && product.baseNotes.length > 0 ? product.baseNotes : ['']);
+      setOtherNotes(Array.isArray(product.otherNotes) && product.otherNotes.length > 0 ? product.otherNotes : ['']);
     } catch (error) {
       console.error('Error fetching product:', error);
       alert('Failed to load product');
@@ -104,23 +110,54 @@ export default function EditProductPage() {
 
     setUploading(true);
     const files = Array.from(e.target.files);
-    const uploadFormData = new FormData();
-
-    files.forEach((file) => {
-      uploadFormData.append('images', file);
-    });
+    const token = localStorage.getItem('adminToken');
+    const uploadedUrls: string[] = [];
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload/images?folder=products`, {
-        method: 'POST',
-        body: uploadFormData,
-      });
+      for (const file of files) {
+        const contentType = file.type || 'image/jpeg';
+        const filename = file.name || `image-${Date.now()}.jpg`;
 
-      const data = await response.json();
-      if (data.success) {
-        setImages([...images, ...data.files.map((f: any) => f.url)]);
-      } else {
-        alert('Failed to upload images. Please try again.');
+        // Try direct-to-S3 presigned URL first (no file through API = no 413)
+        const presignRes = await fetch(
+          `${API_BASE_URL}/upload/presign?folder=products&filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(contentType)}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        );
+        const presignData = await presignRes.json();
+
+        if (presignRes.ok && presignData.uploadUrl && presignData.publicUrl) {
+          const putRes = await fetch(presignData.uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': contentType },
+          });
+          if (putRes.ok) {
+            uploadedUrls.push(presignData.publicUrl);
+          } else {
+            console.error('S3 PUT failed for', file.name);
+          }
+        } else {
+          // Fallback: upload via API (when S3 presign not configured or fails)
+          const formData = new FormData();
+          formData.append('image', file);
+          const response = await fetch(`${API_BASE_URL}/upload/image?folder=products`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: formData,
+          });
+          const data = await response.json();
+          if (data.success && data.url) {
+            uploadedUrls.push(data.url);
+          } else {
+            console.error('Upload failed for', file.name, data);
+          }
+        }
+      }
+      if (uploadedUrls.length > 0) {
+        setImages((prev) => [...prev, ...uploadedUrls]);
+      }
+      if (uploadedUrls.length < files.length) {
+        alert(`Uploaded ${uploadedUrls.length} of ${files.length} images. Some may have failed.`);
       }
     } catch (error) {
       console.error('Error uploading images:', error);
@@ -144,6 +181,14 @@ export default function EditProductPage() {
     setBulletPoints(updated);
   };
 
+  const addNote = (setter: React.Dispatch<React.SetStateAction<string[]>>, current: string[]) => setter([...current, '']);
+  const removeNote = (setter: React.Dispatch<React.SetStateAction<string[]>>, current: string[], index: number) => setter(current.filter((_, i) => i !== index));
+  const updateNote = (setter: React.Dispatch<React.SetStateAction<string[]>>, current: string[], index: number, value: string) => {
+    const updated = [...current];
+    updated[index] = value;
+    setter(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -158,7 +203,10 @@ export default function EditProductPage() {
         rating: parseFloat(formData.rating) || 0,
         reviewCount: parseInt(formData.reviewCount) || 0,
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
-        notes: formData.notes.split(',').map(n => n.trim()).filter(n => n),
+        topNotes: topNotes.filter(n => n.trim() !== ''),
+        heartNotes: heartNotes.filter(n => n.trim() !== ''),
+        baseNotes: baseNotes.filter(n => n.trim() !== ''),
+        otherNotes: otherNotes.filter(n => n.trim() !== ''),
         bulletPoints: bulletPoints.filter(bp => bp.trim() !== ''),
         images: images,
         collections: collections,
@@ -325,15 +373,92 @@ export default function EditProductPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Notes (comma separated)</label>
-              <input
-                type="text"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-4 py-2 border rounded-md"
-                placeholder="Bergamot, Pepper, Lavender"
-              />
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Fragrance Notes</label>
+              <p className="text-xs text-gray-500 mb-3">Add Top, Heart, and Base notes. Use &quot;Other notes&quot; for any additional notes.</p>
+              <div className="space-y-4">
+                <div>
+                  <span className="block text-sm font-medium text-gray-700 mb-2">Top notes</span>
+                  <div className="space-y-2">
+                    {topNotes.map((note, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={note}
+                          onChange={(e) => updateNote(setTopNotes, topNotes, index, e.target.value)}
+                          placeholder="e.g. Bergamot, Lemon"
+                          className="flex-1 px-4 py-2 border rounded-md"
+                        />
+                        {topNotes.length > 1 && (
+                          <button type="button" onClick={() => removeNote(setTopNotes, topNotes, index)} className="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 text-sm">Remove</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => addNote(setTopNotes, topNotes)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">+ Add Top note</button>
+                  </div>
+                </div>
+                <div>
+                  <span className="block text-sm font-medium text-gray-700 mb-2">Heart notes</span>
+                  <div className="space-y-2">
+                    {heartNotes.map((note, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={note}
+                          onChange={(e) => updateNote(setHeartNotes, heartNotes, index, e.target.value)}
+                          placeholder="e.g. Lavender, Rose"
+                          className="flex-1 px-4 py-2 border rounded-md"
+                        />
+                        {heartNotes.length > 1 && (
+                          <button type="button" onClick={() => removeNote(setHeartNotes, heartNotes, index)} className="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 text-sm">Remove</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => addNote(setHeartNotes, heartNotes)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">+ Add Heart note</button>
+                  </div>
+                </div>
+                <div>
+                  <span className="block text-sm font-medium text-gray-700 mb-2">Base notes</span>
+                  <div className="space-y-2">
+                    {baseNotes.map((note, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={note}
+                          onChange={(e) => updateNote(setBaseNotes, baseNotes, index, e.target.value)}
+                          placeholder="e.g. Vetiver, Sandalwood"
+                          className="flex-1 px-4 py-2 border rounded-md"
+                        />
+                        {baseNotes.length > 1 && (
+                          <button type="button" onClick={() => removeNote(setBaseNotes, baseNotes, index)} className="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 text-sm">Remove</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => addNote(setBaseNotes, baseNotes)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">+ Add Base note</button>
+                  </div>
+                </div>
+                <div>
+                  <span className="block text-sm font-medium text-gray-700 mb-2">Other notes</span>
+                  <p className="text-xs text-gray-500 mb-2">Add any other fragrance notes if needed.</p>
+                  <div className="space-y-2">
+                    {otherNotes.map((note, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={note}
+                          onChange={(e) => updateNote(setOtherNotes, otherNotes, index, e.target.value)}
+                          placeholder="e.g. Musk, Amber"
+                          className="flex-1 px-4 py-2 border rounded-md"
+                        />
+                        {otherNotes.length > 1 && (
+                          <button type="button" onClick={() => removeNote(setOtherNotes, otherNotes, index)} className="bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 text-sm">Remove</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => addNote(setOtherNotes, otherNotes)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">+ Add another note</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
