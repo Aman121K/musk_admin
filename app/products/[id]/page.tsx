@@ -19,6 +19,8 @@ export default function EditProductPage() {
     slug: '',
     description: '',
     shortDescription: '',
+    ingredients: '',
+    packagingAndRecycling: '',
     price: '',
     originalPrice: '',
     category: 'Inspired Perfumes',
@@ -38,6 +40,10 @@ export default function EditProductPage() {
   const [heartNotes, setHeartNotes] = useState<string[]>(['']);
   const [baseNotes, setBaseNotes] = useState<string[]>(['']);
   const [otherNotes, setOtherNotes] = useState<string[]>(['']);
+  const [topNotesImage, setTopNotesImage] = useState('');
+  const [heartNotesImage, setHeartNotesImage] = useState('');
+  const [baseNotesImage, setBaseNotesImage] = useState('');
+  const [uploadingNoteImage, setUploadingNoteImage] = useState<string | null>(null);
 
   const COLLECTIONS = ['Best Seller', 'Niche Edition', 'Inspired Perfumes', 'New Arrivals'];
   const NEW_ARRIVAL_DATES = ['SEPTEMBER - 2025', 'July-2025', 'MARCH- 2025'];
@@ -73,6 +79,8 @@ export default function EditProductPage() {
         slug: product.slug || '',
         description: product.description || '',
         shortDescription: product.shortDescription || '',
+        ingredients: product.ingredients || '',
+        packagingAndRecycling: product.packagingAndRecycling || '',
         price: product.price?.toString() || '',
         originalPrice: product.originalPrice?.toString() || '',
         category: product.category || 'Inspired Perfumes',
@@ -96,6 +104,9 @@ export default function EditProductPage() {
       setHeartNotes(Array.isArray(product.heartNotes) && product.heartNotes.length > 0 ? product.heartNotes : ['']);
       setBaseNotes(Array.isArray(product.baseNotes) && product.baseNotes.length > 0 ? product.baseNotes : ['']);
       setOtherNotes(Array.isArray(product.otherNotes) && product.otherNotes.length > 0 ? product.otherNotes : ['']);
+      setTopNotesImage(product.topNotesImage || '');
+      setHeartNotesImage(product.heartNotesImage || '');
+      setBaseNotesImage(product.baseNotesImage || '');
     } catch (error) {
       console.error('Error fetching product:', error);
       alert('Failed to load product');
@@ -167,6 +178,44 @@ export default function EditProductPage() {
     }
   };
 
+  const uploadNoteImage = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void, field: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingNoteImage(field);
+    const token = localStorage.getItem('adminToken');
+    try {
+      const contentType = file.type || 'image/jpeg';
+      const filename = file.name || `note-${Date.now()}.jpg`;
+      const presignRes = await fetch(
+        `${API_BASE_URL}/upload/presign?folder=products&filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(contentType)}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      const presignData = await presignRes.json();
+      if (presignRes.ok && presignData.uploadUrl && presignData.publicUrl) {
+        const putRes = await fetch(presignData.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': contentType } });
+        if (putRes.ok) {
+          setter(presignData.publicUrl);
+        }
+      } else {
+        const formData = new FormData();
+        formData.append('image', file);
+        const res = await fetch(`${API_BASE_URL}/upload/image?folder=products`, {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.success && data.url) setter(data.url);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to upload image');
+    } finally {
+      setUploadingNoteImage(null);
+    }
+    e.target.value = '';
+  };
+
   const addBulletPoint = () => {
     setBulletPoints([...bulletPoints, '']);
   };
@@ -207,7 +256,12 @@ export default function EditProductPage() {
         heartNotes: heartNotes.filter(n => n.trim() !== ''),
         baseNotes: baseNotes.filter(n => n.trim() !== ''),
         otherNotes: otherNotes.filter(n => n.trim() !== ''),
+        topNotesImage: topNotesImage || undefined,
+        heartNotesImage: heartNotesImage || undefined,
+        baseNotesImage: baseNotesImage || undefined,
         bulletPoints: bulletPoints.filter(bp => bp.trim() !== ''),
+        ingredients: formData.ingredients?.trim() || undefined,
+        packagingAndRecycling: formData.packagingAndRecycling?.trim() || undefined,
         images: images,
         collections: collections,
         newArrivalDate: collections.includes('New Arrivals') ? formData.newArrivalDate : undefined,
@@ -311,6 +365,30 @@ export default function EditProductPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-2">Ingredients</label>
+              <p className="text-xs text-gray-500 mb-1">Shown in the &quot;Ingredients&quot; tab on the product page.</p>
+              <textarea
+                rows={3}
+                value={formData.ingredients}
+                onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+                className="w-full px-4 py-2 border rounded-md"
+                placeholder="e.g. Alcohol, Fragrance, Water, ..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Packaging and recycling</label>
+              <p className="text-xs text-gray-500 mb-1">Shown in the &quot;Packaging and recycling&quot; tab on the product page.</p>
+              <textarea
+                rows={4}
+                value={formData.packagingAndRecycling}
+                onChange={(e) => setFormData({ ...formData, packagingAndRecycling: e.target.value })}
+                className="w-full px-4 py-2 border rounded-md"
+                placeholder="e.g. Many packaging components are recyclable. We recommend..."
+              />
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Price *</label>
@@ -396,6 +474,17 @@ export default function EditProductPage() {
                     ))}
                     <button type="button" onClick={() => addNote(setTopNotes, topNotes)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">+ Add Top note</button>
                   </div>
+                  <div className="mt-2">
+                    <span className="block text-xs text-gray-500 mb-1">Image for Top notes (shown on product page)</span>
+                    <input type="file" accept="image/*" onChange={(e) => uploadNoteImage(e, setTopNotesImage, 'top')} className="w-full text-sm" disabled={uploadingNoteImage === 'top'} />
+                    {uploadingNoteImage === 'top' && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+                    {topNotesImage && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={getImageUrl(topNotesImage)} alt="Top notes" className="h-20 w-auto object-contain rounded border border-gray-200" />
+                        <button type="button" onClick={() => setTopNotesImage('')} className="text-red-600 text-sm">Remove</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <span className="block text-sm font-medium text-gray-700 mb-2">Heart notes</span>
@@ -416,6 +505,17 @@ export default function EditProductPage() {
                     ))}
                     <button type="button" onClick={() => addNote(setHeartNotes, heartNotes)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">+ Add Heart note</button>
                   </div>
+                  <div className="mt-2">
+                    <span className="block text-xs text-gray-500 mb-1">Image for Heart notes (shown on product page)</span>
+                    <input type="file" accept="image/*" onChange={(e) => uploadNoteImage(e, setHeartNotesImage, 'heart')} className="w-full text-sm" disabled={uploadingNoteImage === 'heart'} />
+                    {uploadingNoteImage === 'heart' && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+                    {heartNotesImage && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={getImageUrl(heartNotesImage)} alt="Heart notes" className="h-20 w-auto object-contain rounded border border-gray-200" />
+                        <button type="button" onClick={() => setHeartNotesImage('')} className="text-red-600 text-sm">Remove</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <span className="block text-sm font-medium text-gray-700 mb-2">Base notes</span>
@@ -435,6 +535,17 @@ export default function EditProductPage() {
                       </div>
                     ))}
                     <button type="button" onClick={() => addNote(setBaseNotes, baseNotes)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">+ Add Base note</button>
+                  </div>
+                  <div className="mt-2">
+                    <span className="block text-xs text-gray-500 mb-1">Image for Base notes (shown on product page)</span>
+                    <input type="file" accept="image/*" onChange={(e) => uploadNoteImage(e, setBaseNotesImage, 'base')} className="w-full text-sm" disabled={uploadingNoteImage === 'base'} />
+                    {uploadingNoteImage === 'base' && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+                    {baseNotesImage && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={getImageUrl(baseNotesImage)} alt="Base notes" className="h-20 w-auto object-contain rounded border border-gray-200" />
+                        <button type="button" onClick={() => setBaseNotesImage('')} className="text-red-600 text-sm">Remove</button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div>
