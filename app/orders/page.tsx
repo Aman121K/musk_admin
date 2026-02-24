@@ -15,10 +15,11 @@ const truncateText = (text: string, maxLength: number = 30): string => {
 interface Order {
   _id: string;
   orderNumber: string;
-  user: {
+  user?: {
     name: string;
     email: string;
-  };
+  } | null;
+  email?: string;
   items: Array<{
     product: {
       name: string;
@@ -158,6 +159,9 @@ export default function OrdersPage() {
       order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.shippingAddress?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.shippingAddress?.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.items?.some((item: any) => 
         item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.product?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -375,8 +379,8 @@ export default function OrdersPage() {
                 ) : (
                   filteredOrders.map((order) => {
                     const isExpanded = expandedItems.has(order._id);
-                    const customerName = order.user?.name || 'N/A';
-                    const customerEmail = order.user?.email || '';
+                    const customerName = order.user?.name || order.shippingAddress?.name || 'Guest';
+                    const customerEmail = order.user?.email || order.email || '';
                     
                     return (
                     <tr key={order._id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
@@ -401,7 +405,7 @@ export default function OrdersPage() {
                               className="text-xs text-gray-500 truncate" 
                               title={customerEmail}
                             >
-                              {truncateText(customerEmail, 25)}
+                              {customerEmail ? truncateText(customerEmail, 25) : '—'}
                             </div>
                           </div>
                         </div>
@@ -582,11 +586,11 @@ export default function OrdersPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-600">Name</p>
-                      <p className="font-medium text-gray-900">{selectedOrder.user?.name || 'N/A'}</p>
+                      <p className="font-medium text-gray-900">{selectedOrder.user?.name || selectedOrder.shippingAddress?.name || 'Guest'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Email</p>
-                      <p className="font-medium text-gray-900">{selectedOrder.user?.email || 'N/A'}</p>
+                      <p className="font-medium text-gray-900">{selectedOrder.user?.email || selectedOrder.email || 'N/A'}</p>
                     </div>
                     {selectedOrder.shippingAddress?.phone && (
                       <div>
