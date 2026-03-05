@@ -30,6 +30,7 @@ export default function NewProductPage() {
   });
   const [collections, setCollections] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [bulletPoints, setBulletPoints] = useState<string[]>(['']);
   const [topNotes, setTopNotes] = useState<string[]>(['']);
@@ -166,6 +167,25 @@ export default function NewProductPage() {
     const updated = [...current];
     updated[index] = value;
     setter(updated);
+  };
+
+  const handleImageDragStart = (index: number) => {
+    setDraggedImageIndex(index);
+  };
+
+  const handleImageDrop = (dropIndex: number) => {
+    if (draggedImageIndex === null || draggedImageIndex === dropIndex) {
+      setDraggedImageIndex(null);
+      return;
+    }
+
+    setImages((prev) => {
+      const reordered = [...prev];
+      const [draggedItem] = reordered.splice(draggedImageIndex, 1);
+      reordered.splice(dropIndex, 0, draggedItem);
+      return reordered;
+    });
+    setDraggedImageIndex(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -593,9 +613,18 @@ export default function NewProductPage() {
             {images.length > 0 && (
               <div className="mt-4">
                 <p className="text-sm text-gray-600 mb-2">Uploaded Images ({images.length})</p>
+                <p className="text-xs text-gray-500 mb-2">Drag and drop images to reorder</p>
                 <div className="grid grid-cols-4 gap-4">
                   {images.map((image, index) => (
-                    <div key={index} className="relative">
+                    <div
+                      key={`${image}-${index}`}
+                      className="relative cursor-move"
+                      draggable
+                      onDragStart={() => handleImageDragStart(index)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => handleImageDrop(index)}
+                      onDragEnd={() => setDraggedImageIndex(null)}
+                    >
                       <img src={getImageUrl(image)} alt={`Product ${index + 1}`} className="w-full h-24 object-cover rounded border border-gray-200" />
                       <button
                         type="button"
@@ -671,4 +700,3 @@ export default function NewProductPage() {
     </Layout>
   );
 }
-
