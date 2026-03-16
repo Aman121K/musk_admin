@@ -15,6 +15,7 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
   { name: 'Products', href: '/products', icon: '🛍️' },
+  { name: 'Categories', href: '/categories', icon: '🗂️' },
   { name: 'Orders', href: '/orders', icon: '📦' },
   { name: 'Users', href: '/users', icon: '👥' },
   { name: 'Testimonials', href: '/testimonials', icon: '💬' },
@@ -114,4 +115,3 @@ export default function Sidebar() {
     </>
   );
 }
-
